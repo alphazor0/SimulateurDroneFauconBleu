@@ -13,13 +13,18 @@ class Player(Camera):
         self.mouse_control()
         super().update()
 
-    def handle_event(self, event):
+    def handle_event(self, event: pg) -> None:
+        """
+        Permet d'ajouter et de retirer des voxels avec des clics.
+
+        entrée : event(type de variable)
+        """
         # adding and removing voxels with clicks
         if event.type == pg.MOUSEBUTTONDOWN:
             voxel_handler = self.app.scene.world.voxel_handler
             if event.button == 1:
                 voxel_handler.set_voxel()
-            if event.button == 3:
+            elif event.button == 3:
                 voxel_handler.switch_mode()
 
     def mouse_control(self):

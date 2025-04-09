@@ -26,7 +26,7 @@ def get_height(x, z):
     height += noise2(x * f4, z * f4) * a4 + a4
     height += noise2(x * f8, z * f8) * a8 - a8
 
-    height = max(height,  noise2(x * f8, z * f8) + 2)
+    height = max(height, noise2(x * f8, z * f8) + 2)
     height *= island
 
     return int(height)
@@ -42,37 +42,44 @@ def set_voxel_id(voxels, x, y, z, wx, wy, wz, world_height):
     voxel_id = 0
 
     if wy < world_height - 1:
-        # create caves
-        if (noise3(wx * 0.09, wy * 0.09, wz * 0.09) > 0 and
-                noise2(wx * 0.1, wz * 0.1) * 3 + 3 < wy < world_height - 10):
-            voxel_id = 0
-
+        if (
+            noise3(wx * 0.09, wy * 0.09, wz * 0.09) > 0
+            and noise2(wx * 0.1, wz * 0.1) * 3 + 3 < wy < world_height - 10
+        ):
+            voxel_id = 0  # L'espace vide (caverne)
         else:
-            voxel_id = STONE
+            voxel_id = STONE  # Le matériau par défaut pour le terrain (pierre)
     else:
         rng = int(7 * random())
         ry = wy - rng
         if SNOW_LVL <= ry < world_height:
             voxel_id = SNOW
-
         elif STONE_LVL <= ry < SNOW_LVL:
             voxel_id = STONE
-
         elif DIRT_LVL <= ry < STONE_LVL:
             voxel_id = DIRT
-
         elif GRASS_LVL <= ry < DIRT_LVL:
             voxel_id = GRASS
-
         else:
             voxel_id = SAND
 
-    # setting ID
+    # Assigner l'ID du voxel
     voxels[get_index(x, y, z)] = voxel_id
 
-    # place tree
+    # Placer un arbre si les conditions sont remplies
     if wy < DIRT_LVL:
         place_tree(voxels, x, y, z, voxel_id)
+
+    # Condition pour le placement des bâtiments : zones aléatoires espacées et hors de l'eau
+    if wy <= DIRT_LVL and random() < 0.05:  # Placer un bâtiment avec 5% de probabilité
+        # Vérifier que le terrain n'est pas sous l'eau
+        if (
+            world_height > WATER_LINE
+        ):  # Si la hauteur du terrain est au-dessus du niveau de l'eau
+            # Vérifier l'espacement des bâtiments
+            if x % 20 == 0 and z % 20 == 0:  # Espacement tous les 20 blocs
+                place_building(voxels, x, y, z, STONE)  # Placer un bâtiment en pierre
+    return None
 
 
 @njit
@@ -107,3 +114,68 @@ def place_tree(voxels, x, y, z, voxel_id):
 
     # top
     voxels[get_index(x, y + TREE_HEIGHT - 2, z)] = LEAVES
+
+
+@njit
+def place_building(voxels, x, y, z, building_id):
+    """
+    Place un bâtiment dans le monde aux coordonnées (x, y, z).
+    :param voxels: La liste des voxels du monde.
+    :param x, y, z: Les coordonnées de la base du bâtiment.
+    :param building_id: L'ID du matériau utilisé pour construire le bâtiment (p. ex. pierre, béton).
+    """
+    # Dimensions du bâtiment
+    building_width = 9  # Largeur du bâtiment
+    building_height = 7  # Hauteur du bâtiment
+    building_depth = 9  # Profondeur du bâtiment
+
+    # Vérifier si le bâtiment tient dans les limites du chunk
+    if (
+        x + building_width > CHUNK_SIZE
+        or y + building_height > CHUNK_SIZE
+        or z + building_depth > CHUNK_SIZE
+    ):
+        return None  # Ne pas placer le bâtiment s'il dépasse les bords du chunk
+
+    # Construction des murs (utilisation du matériau 'building_id' pour les murs)
+    for ix in range(building_width):
+        for iy in range(building_height):
+            for iz in range(building_depth):
+                # Construire les murs (sur les bords du bâtiment)
+                if (
+                    ix == 0
+                    or ix == building_width - 1
+                    or iz == 0
+                    or iz == building_depth - 1
+                ):
+                    voxels[get_index(x + ix, y + iy, z + iz)] = (
+                        building_id  # Murs en pierre (STONE)
+                    )
+
+    # Création du toit (utilisation de 'building_id' pour le toit)
+    for ix in range(building_width):
+        for iz in range(building_depth):
+            voxels[get_index(x + ix, y + building_height, z + iz)] = (
+                building_id  # Toit en pierre
+            )
+
+    # **Ne pas ajouter de blocs de terre au-dessus du bâtiment**
+    # Placer le sol sous le bâtiment, mais **ne pas** modifier les positions au-dessus du bâtiment
+    for ix in range(building_width):
+        for iz in range(building_depth):
+            # Placer du sol sous le bâtiment seulement, en évitant de toucher au-dessus
+            if (
+                y - 1 >= 0
+            ):  # Assurez-vous que la position du sol est dans les limites du chunk
+                voxels[get_index(x + ix, y - 1, z + iz)] = DIRT  # Sol sous le bâtiment
+
+    # Ajouter une porte (utiliser un matériau comme 'WOOD' pour la porte)
+    door_width = 1
+    door_height = 2
+    for ix in range(door_width):
+        for iy in range(door_height):
+            voxels[
+                get_index(x + building_width // 2 - door_width // 2 + ix, y + iy, z)
+            ] = WOOD  # Porte en bois
+
+    return True
