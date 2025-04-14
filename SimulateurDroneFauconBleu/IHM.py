@@ -261,7 +261,9 @@ class MainMenu:
         parameter_window.mainloop()
 
     def start_pygame_program(self):
-        script_path = os.path.join(os.getcwd(), "SimulateurDroneFauconBleu", "2D.py")
+        script_path = os.path.join(
+            os.getcwd(), "SimulateurDroneFauconBleu", "carte_2D.py"
+        )
 
         if not os.path.isfile(script_path):
             messagebox.showerror("Erreur", f"Le fichier {script_path} est introuvable.")
@@ -271,7 +273,7 @@ class MainMenu:
 
         subprocess.Popen(
             [os.path.join(os.getcwd(), ".venv", "Scripts", "python.exe"), script_path],
-            cwd=script_dir,  # Set the working directory to the directory of 2D.py
+            cwd=script_dir,  # Set the working directory to the directory of Carte_2D.py
         )
 
 
