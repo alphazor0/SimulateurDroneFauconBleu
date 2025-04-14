@@ -1,5 +1,14 @@
 import unittest
-from SimulateurDroneFauconBleu.Drone_2D import Drone_2D
+import sys
+import os
+
+sys.path.append(
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "SimulateurDroneFauconBleu")
+    )
+)
+
+from Carte_2D import *  # ou importe ce dont tu as besoin
 
 
 class TestDrone2D(unittest.TestCase):
